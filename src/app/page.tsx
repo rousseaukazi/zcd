@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface CalculationResult {
   zcd: number | 'infinite';
@@ -11,12 +12,82 @@ interface CalculationResult {
   sustainableRate: number;
 }
 
+interface YearlyData {
+  year: number;
+  burnRate: number;
+  portfolioValue: number;
+  netWorth: number;
+}
+
 export default function ZeeCeeDee() {
   const [startingAmount, setStartingAmount] = useState<number>(1000000);
   const [burn, setBurn] = useState<number>(50000);
   const [inflation, setInflation] = useState<number>(3);
   const [growth, setGrowth] = useState<number>(7);
   const [result, setResult] = useState<CalculationResult | null>(null);
+  const [yearlyData, setYearlyData] = useState<YearlyData[]>([]);
+
+  // Format number with commas for display
+  const formatNumberWithCommas = (num: number) => {
+    return num.toLocaleString('en-US');
+  };
+
+  // Parse number from comma-formatted string
+  const parseNumberFromCommas = (str: string) => {
+    return parseFloat(str.replace(/,/g, '')) || 0;
+  };
+
+  // Handle currency input changes with comma formatting
+  const handleCurrencyChange = (value: string, setter: (val: number) => void) => {
+    const numericValue = parseNumberFromCommas(value);
+    setter(numericValue);
+  };
+
+  // Generate yearly data for graphs
+  const generateYearlyData = (A: number, B: number, G: number, Inf: number, maxYears: number) => {
+    const data: YearlyData[] = [];
+    let currentPortfolio = A;
+    let currentBurn = B;
+    
+    // Add year 0 (starting point)
+    data.push({
+      year: 0,
+      burnRate: currentBurn,
+      portfolioValue: currentPortfolio,
+      netWorth: currentPortfolio
+    });
+
+    for (let year = 1; year <= maxYears; year++) {
+      // Withdraw burn at beginning of year
+      currentPortfolio -= currentBurn;
+      
+      // Check if we've run out of money
+      if (currentPortfolio <= 0) {
+        data.push({
+          year,
+          burnRate: currentBurn,
+          portfolioValue: 0,
+          netWorth: 0
+        });
+        break;
+      }
+      
+      // Apply growth to remaining portfolio
+      currentPortfolio *= (1 + G);
+      
+      // Increase burn rate for next year due to inflation
+      currentBurn *= (1 + Inf);
+      
+      data.push({
+        year,
+        burnRate: currentBurn,
+        portfolioValue: currentPortfolio,
+        netWorth: currentPortfolio
+      });
+    }
+    
+    return data;
+  };
 
   const calculateZCD = () => {
     const A = startingAmount;
@@ -40,6 +111,9 @@ export default function ZeeCeeDee() {
         spendingRate,
         sustainableRate
       });
+      // Generate data for 50 years to show the infinite trend
+      const data = generateYearlyData(A, B, G, Inf, 50);
+      setYearlyData(data);
       return;
     }
 
@@ -69,6 +143,10 @@ export default function ZeeCeeDee() {
       spendingRate,
       sustainableRate
     });
+
+    // Generate yearly data up to ZCD + a few extra years
+    const data = generateYearlyData(A, B, G, Inf, N + 5);
+    setYearlyData(data);
   };
 
   useEffect(() => {
@@ -88,9 +166,26 @@ export default function ZeeCeeDee() {
     return `${rate.toFixed(2)}%`;
   };
 
+  // Custom tooltip formatter for charts
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
+          <p className="font-medium text-gray-900 dark:text-white">{`Year ${label}`}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ color: entry.color }} className="text-sm">
+              {entry.name}: {formatCurrency(entry.value)}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-indigo-900 dark:to-purple-900">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
@@ -105,7 +200,7 @@ export default function ZeeCeeDee() {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-8 mb-12">
           {/* Input Panel */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
             <h2 className="text-2xl font-semibold mb-6 text-gray-800 dark:text-white">
@@ -119,11 +214,11 @@ export default function ZeeCeeDee() {
                   Starting Amount (A)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">$</span>
                   <input
-                    type="number"
-                    value={startingAmount}
-                    onChange={(e) => setStartingAmount(Number(e.target.value))}
+                    type="text"
+                    value={formatNumberWithCommas(startingAmount)}
+                    onChange={(e) => handleCurrencyChange(e.target.value, setStartingAmount)}
                     className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     placeholder="1,000,000"
                   />
@@ -137,11 +232,11 @@ export default function ZeeCeeDee() {
                   Annual Burn (B)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">$</span>
                   <input
-                    type="number"
-                    value={burn}
-                    onChange={(e) => setBurn(Number(e.target.value))}
+                    type="text"
+                    value={formatNumberWithCommas(burn)}
+                    onChange={(e) => handleCurrencyChange(e.target.value, setBurn)}
                     className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     placeholder="50,000"
                   />
@@ -160,10 +255,10 @@ export default function ZeeCeeDee() {
                     step="0.1"
                     value={inflation}
                     onChange={(e) => setInflation(Number(e.target.value))}
-                    className="w-full pr-8 pl-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full pr-12 pl-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     placeholder="3.0"
                   />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">%</span>
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white dark:text-white font-bold text-lg bg-blue-500 dark:bg-blue-600 px-2 py-1 rounded text-sm">%</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Annual expense growth rate</p>
               </div>
@@ -179,10 +274,10 @@ export default function ZeeCeeDee() {
                     step="0.1"
                     value={growth}
                     onChange={(e) => setGrowth(Number(e.target.value))}
-                    className="w-full pr-8 pl-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full pr-12 pl-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     placeholder="7.0"
                   />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">%</span>
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white dark:text-white font-bold text-lg bg-green-500 dark:bg-green-600 px-2 py-1 rounded text-sm">%</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Annual portfolio growth rate</p>
               </div>
@@ -291,6 +386,53 @@ export default function ZeeCeeDee() {
             )}
           </div>
         </div>
+
+        {/* Charts Section */}
+        {yearlyData.length > 0 && (
+          <div className="space-y-8">
+            {/* Combined View */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+              <h3 className="text-2xl font-semibold mb-6 text-gray-800 dark:text-white">
+                Portfolio vs. Expenses Over Time
+              </h3>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={yearlyData}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis 
+                      dataKey="year" 
+                      tick={{ fontSize: 12, fill: '#ffffff' }}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12, fill: '#ffffff' }}
+                      tickFormatter={(value) => formatCurrency(value)}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="portfolioValue" 
+                      stroke="#3B82F6" 
+                      strokeWidth={3}
+                      name="Portfolio Value"
+                      dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3 }}
+                      activeDot={{ r: 6, stroke: '#3B82F6', strokeWidth: 2 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="burnRate" 
+                      stroke="#EF4444" 
+                      strokeWidth={3}
+                      name="Annual Expenses"
+                      dot={{ fill: '#EF4444', strokeWidth: 2, r: 3 }}
+                      activeDot={{ r: 6, stroke: '#EF4444', strokeWidth: 2 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="text-center mt-12 text-sm text-gray-500 dark:text-gray-400">
