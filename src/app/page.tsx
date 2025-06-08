@@ -63,7 +63,15 @@ const AnimatedNumber: React.FC<{ value: number | 'infinite'; duration?: number }
   }, [value, duration]);
 
   if (value === 'infinite') {
-    return <span>∞</span>;
+    return (
+      <span className="infinity-symbol">
+        ∞
+        <span className="sparkle sparkle-1"></span>
+        <span className="sparkle sparkle-2"></span>
+        <span className="sparkle sparkle-3"></span>
+        <span className="sparkle sparkle-4"></span>
+      </span>
+    );
   }
 
   return (
@@ -241,7 +249,7 @@ export default function ZeeCeeDee() {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-gray-800 p-3 border border-gray-600 rounded-lg shadow-lg">
+        <div className="bg-gray-800 p-3 border border-gray-600 rounded-lg shadow-lg tooltip-animated">
           <p className="font-medium text-white">{`Year ${label}`}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} style={{ color: entry.color }} className="text-sm">
@@ -373,7 +381,7 @@ export default function ZeeCeeDee() {
                   {result.isInfinite ? (
                     <div>
                       <p className="text-4xl font-bold text-green-400 mb-2">
-                        ∞
+                        <AnimatedNumber value={result.zcd} />
                       </p>
                       <p className="text-sm text-green-400 font-medium">
                         You'll never run out of money!
@@ -488,8 +496,8 @@ export default function ZeeCeeDee() {
                       stroke="#3B82F6" 
                       strokeWidth={3}
                       name="Portfolio Value"
-                      dot={{ fill: '#3B82F6', strokeWidth: 2, r: 3 }}
-                      activeDot={{ r: 6, stroke: '#3B82F6', strokeWidth: 2 }}
+                      dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 8, stroke: '#3B82F6', strokeWidth: 2, fill: '#3B82F6' }}
                     />
                     <Line 
                       type="monotone" 
@@ -497,8 +505,8 @@ export default function ZeeCeeDee() {
                       stroke="#EF4444" 
                       strokeWidth={3}
                       name="Annual Expenses"
-                      dot={{ fill: '#EF4444', strokeWidth: 2, r: 3 }}
-                      activeDot={{ r: 6, stroke: '#EF4444', strokeWidth: 2 }}
+                      dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 8, stroke: '#EF4444', strokeWidth: 2, fill: '#EF4444' }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
