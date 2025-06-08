@@ -80,6 +80,10 @@ export default function ZeeCeeDee() {
   const [growth, setGrowth] = useState<number>(7);
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [yearlyData, setYearlyData] = useState<YearlyData[]>([]);
+  
+  // Separate display states for inputs to allow proper editing
+  const [startingAmountDisplay, setStartingAmountDisplay] = useState<string>('1,000,000');
+  const [burnDisplay, setBurnDisplay] = useState<string>('50,000');
 
   // Format number with commas for display
   const formatNumberWithCommas = (num: number) => {
@@ -94,11 +98,20 @@ export default function ZeeCeeDee() {
     return isNaN(num) ? 0 : num;
   };
 
-  // Handle currency input with proper editing support
-  const handleCurrencyInput = (value: string, setter: (val: number) => void) => {
-    // Allow user to type freely, we'll parse and format
-    const numericValue = parseNumberFromCommas(value);
-    setter(numericValue);
+  // Handle input changes - allow free typing but filter out letters
+  const handleInputChange = (value: string, setDisplay: (val: string) => void, setActual: (val: number) => void) => {
+    // Filter out letters but allow numbers, commas, periods, and spaces
+    const filtered = value.replace(/[^0-9,.\s]/g, '');
+    setDisplay(filtered);
+    
+    // Parse and update the actual numeric value
+    const numericValue = parseNumberFromCommas(filtered);
+    setActual(numericValue);
+  };
+
+  // Handle blur - reformat the display value
+  const handleInputBlur = (actualValue: number, setDisplay: (val: string) => void) => {
+    setDisplay(formatNumberWithCommas(actualValue));
   };
 
   // Generate yearly data for graphs
@@ -275,8 +288,9 @@ export default function ZeeCeeDee() {
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium">$</span>
                   <input
                     type="text"
-                    value={formatNumberWithCommas(startingAmount)}
-                    onChange={(e) => handleCurrencyInput(e.target.value, setStartingAmount)}
+                    value={startingAmountDisplay}
+                    onChange={(e) => handleInputChange(e.target.value, setStartingAmountDisplay, setStartingAmount)}
+                    onBlur={() => handleInputBlur(startingAmount, setStartingAmountDisplay)}
                     className="w-full pl-8 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                     placeholder="1,000,000"
                   />
@@ -293,8 +307,9 @@ export default function ZeeCeeDee() {
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium">$</span>
                   <input
                     type="text"
-                    value={formatNumberWithCommas(burn)}
-                    onChange={(e) => handleCurrencyInput(e.target.value, setBurn)}
+                    value={burnDisplay}
+                    onChange={(e) => handleInputChange(e.target.value, setBurnDisplay, setBurn)}
+                    onBlur={() => handleInputBlur(burn, setBurnDisplay)}
                     className="w-full pl-8 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                     placeholder="50,000"
                   />
