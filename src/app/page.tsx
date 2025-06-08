@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface CalculationResult {
@@ -19,6 +19,60 @@ interface YearlyData {
   netWorth: number;
 }
 
+// Animated Number Component
+const AnimatedNumber: React.FC<{ value: number | 'infinite'; duration?: number }> = ({ value, duration = 1000 }) => {
+  const [displayValue, setDisplayValue] = useState<number>(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const prevValueRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (value === 'infinite') {
+      setDisplayValue(0);
+      return;
+    }
+
+    const numericValue = typeof value === 'number' ? value : 0;
+    const prevValue = prevValueRef.current;
+    
+    if (prevValue === numericValue) return;
+
+    setIsAnimating(true);
+    const startTime = Date.now();
+    const difference = numericValue - prevValue;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function for smooth animation
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      
+      const currentValue = prevValue + (difference * easeOutQuart);
+      setDisplayValue(Math.round(currentValue));
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setDisplayValue(numericValue);
+        setIsAnimating(false);
+        prevValueRef.current = numericValue;
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [value, duration]);
+
+  if (value === 'infinite') {
+    return <span>∞</span>;
+  }
+
+  return (
+    <span className={isAnimating ? 'transition-all duration-100' : ''}>
+      {displayValue}
+    </span>
+  );
+};
+
 export default function ZeeCeeDee() {
   const [startingAmount, setStartingAmount] = useState<number>(1000000);
   const [burn, setBurn] = useState<number>(50000);
@@ -29,16 +83,20 @@ export default function ZeeCeeDee() {
 
   // Format number with commas for display
   const formatNumberWithCommas = (num: number) => {
+    if (isNaN(num)) return '';
     return num.toLocaleString('en-US');
   };
 
   // Parse number from comma-formatted string
   const parseNumberFromCommas = (str: string) => {
-    return parseFloat(str.replace(/,/g, '')) || 0;
+    const cleaned = str.replace(/[^0-9.]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
   };
 
-  // Handle currency input changes with comma formatting
-  const handleCurrencyChange = (value: string, setter: (val: number) => void) => {
+  // Handle currency input with proper editing support
+  const handleCurrencyInput = (value: string, setter: (val: number) => void) => {
+    // Allow user to type freely, we'll parse and format
     const numericValue = parseNumberFromCommas(value);
     setter(numericValue);
   };
@@ -170,8 +228,8 @@ export default function ZeeCeeDee() {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
-          <p className="font-medium text-gray-900 dark:text-white">{`Year ${label}`}</p>
+        <div className="bg-gray-800 p-3 border border-gray-600 rounded-lg shadow-lg">
+          <p className="font-medium text-white">{`Year ${label}`}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} style={{ color: entry.color }} className="text-sm">
               {entry.name}: {formatCurrency(entry.value)}
@@ -184,17 +242,17 @@ export default function ZeeCeeDee() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-indigo-900 dark:to-purple-900">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-900 to-purple-900">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-4">
             ZeeCeeDee
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-2">
+          <p className="text-xl text-gray-300 mb-2">
             Zero Cash Date Calculator
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
+          <p className="text-sm text-gray-400 max-w-2xl mx-auto">
             Calculate when you'll run out of money based on your starting amount, burn rate, inflation, and growth rate.
             We withdraw expenses at the beginning of each year for the most conservative estimate.
           </p>
@@ -202,51 +260,51 @@ export default function ZeeCeeDee() {
 
         <div className="grid lg:grid-cols-2 gap-8 mb-12">
           {/* Input Panel */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
-            <h2 className="text-2xl font-semibold mb-6 text-gray-800 dark:text-white">
+          <div className="bg-gray-800 rounded-2xl shadow-xl p-8">
+            <h2 className="text-2xl font-semibold mb-6 text-white">
               Financial Inputs
             </h2>
             
             <div className="space-y-6">
               {/* Starting Amount */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Starting Amount (A)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">$</span>
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium">$</span>
                   <input
                     type="text"
                     value={formatNumberWithCommas(startingAmount)}
-                    onChange={(e) => handleCurrencyChange(e.target.value, setStartingAmount)}
-                    className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    onChange={(e) => handleCurrencyInput(e.target.value, setStartingAmount)}
+                    className="w-full pl-8 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                     placeholder="1,000,000"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Your liquid net worth</p>
+                <p className="text-xs text-gray-400 mt-1">Your liquid net worth</p>
               </div>
 
               {/* Annual Burn */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Annual Burn (B)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">$</span>
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium">$</span>
                   <input
                     type="text"
                     value={formatNumberWithCommas(burn)}
-                    onChange={(e) => handleCurrencyChange(e.target.value, setBurn)}
-                    className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    onChange={(e) => handleCurrencyInput(e.target.value, setBurn)}
+                    className="w-full pl-8 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                     placeholder="50,000"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Your annual expenses (first year)</p>
+                <p className="text-xs text-gray-400 mt-1">Your annual expenses (first year)</p>
               </div>
 
               {/* Inflation Rate */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Inflation Rate (Inf)
                 </label>
                 <div className="relative">
@@ -255,17 +313,17 @@ export default function ZeeCeeDee() {
                     step="0.1"
                     value={inflation}
                     onChange={(e) => setInflation(Number(e.target.value))}
-                    className="w-full pr-12 pl-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full pr-12 pl-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                     placeholder="3.0"
                   />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white dark:text-white font-bold text-lg bg-blue-500 dark:bg-blue-600 px-2 py-1 rounded text-sm">%</span>
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-blue-500 px-2 py-1 rounded text-sm">%</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Annual expense growth rate</p>
+                <p className="text-xs text-gray-400 mt-1">Annual expense growth rate</p>
               </div>
 
               {/* Growth Rate */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Growth Rate (G)
                 </label>
                 <div className="relative">
@@ -274,45 +332,45 @@ export default function ZeeCeeDee() {
                     step="0.1"
                     value={growth}
                     onChange={(e) => setGrowth(Number(e.target.value))}
-                    className="w-full pr-12 pl-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full pr-12 pl-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                     placeholder="7.0"
                   />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white dark:text-white font-bold text-lg bg-green-500 dark:bg-green-600 px-2 py-1 rounded text-sm">%</span>
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-green-500 px-2 py-1 rounded text-sm">%</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Annual portfolio growth rate</p>
+                <p className="text-xs text-gray-400 mt-1">Annual portfolio growth rate</p>
               </div>
             </div>
           </div>
 
           {/* Results Panel */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
-            <h2 className="text-2xl font-semibold mb-6 text-gray-800 dark:text-white">
+          <div className="bg-gray-800 rounded-2xl shadow-xl p-8">
+            <h2 className="text-2xl font-semibold mb-6 text-white">
               Results
             </h2>
             
             {result && (
               <div className="space-y-6">
                 {/* Main Result */}
-                <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl">
-                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div className="text-center p-6 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-xl">
+                  <h3 className="text-lg font-medium text-gray-300 mb-2">
                     Zero Cash Date
                   </h3>
                   {result.isInfinite ? (
                     <div>
-                      <p className="text-4xl font-bold text-green-600 dark:text-green-400 mb-2">
+                      <p className="text-4xl font-bold text-green-400 mb-2">
                         ∞
                       </p>
-                      <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                      <p className="text-sm text-green-400 font-medium">
                         You'll never run out of money!
                       </p>
                     </div>
                   ) : (
                     <div>
-                      <p className="text-4xl font-bold text-red-600 dark:text-red-400 mb-2">
-                        {result.zcd} years
+                      <p className="text-4xl font-bold text-red-400 mb-2">
+                        <AnimatedNumber value={result.zcd} /> years
                       </p>
-                      <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                        Money runs out in {result.zcd} years
+                      <p className="text-sm text-red-400 font-medium">
+                        Money runs out in <AnimatedNumber value={result.zcd} /> years
                       </p>
                     </div>
                   )}
@@ -320,45 +378,45 @@ export default function ZeeCeeDee() {
 
                 {/* Detailed Metrics */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide">
                       Real Growth Rate
                     </p>
-                    <p className="text-lg font-semibold text-gray-800 dark:text-white">
+                    <p className="text-lg font-semibold text-white">
                       {formatPercent(result.realGrowthRate)}
                     </p>
                   </div>
                   
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide">
                       Spending Rate
                     </p>
-                    <p className="text-lg font-semibold text-gray-800 dark:text-white">
+                    <p className="text-lg font-semibold text-white">
                       {formatPercent(result.spendingRate)}
                     </p>
                   </div>
                   
-                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg col-span-2">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  <div className="bg-gray-700 p-4 rounded-lg col-span-2">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide">
                       Sustainable Rate
                     </p>
-                    <p className="text-lg font-semibold text-gray-800 dark:text-white">
+                    <p className="text-lg font-semibold text-white">
                       {formatPercent(result.sustainableRate)}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-xs text-gray-400 mt-1">
                       Maximum sustainable spending rate
                     </p>
                   </div>
 
                   {result.criticalCapital && (
-                    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg col-span-2">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    <div className="bg-gray-700 p-4 rounded-lg col-span-2">
+                      <p className="text-xs text-gray-400 uppercase tracking-wide">
                         Critical Capital
                       </p>
-                      <p className="text-lg font-semibold text-gray-800 dark:text-white">
+                      <p className="text-lg font-semibold text-white">
                         {formatCurrency(result.criticalCapital)}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      <p className="text-xs text-gray-400 mt-1">
                         Balance needed to exactly cover annual burn
                       </p>
                     </div>
@@ -368,13 +426,13 @@ export default function ZeeCeeDee() {
                 {/* Status Message */}
                 <div className={`p-4 rounded-lg ${
                   result.isInfinite 
-                    ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
-                    : 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800'
+                    ? 'bg-green-50 border border-green-200' 
+                    : 'bg-amber-50 border border-amber-200'
                 }`}>
                   <p className={`text-sm font-medium ${
                     result.isInfinite 
-                      ? 'text-green-800 dark:text-green-200' 
-                      : 'text-amber-800 dark:text-amber-200'
+                      ? 'text-green-800' 
+                      : 'text-amber-800'
                   }`}>
                     {result.isInfinite 
                       ? `Your spending rate (${formatPercent(result.spendingRate)}) is below the sustainable rate (${formatPercent(result.sustainableRate)}). Your portfolio growth covers your expenses!`
@@ -391,14 +449,14 @@ export default function ZeeCeeDee() {
         {yearlyData.length > 0 && (
           <div className="space-y-8">
             {/* Combined View */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
-              <h3 className="text-2xl font-semibold mb-6 text-gray-800 dark:text-white">
+            <div className="bg-gray-800 rounded-2xl shadow-xl p-8">
+              <h3 className="text-2xl font-semibold mb-6 text-white">
                 Portfolio vs. Expenses Over Time
               </h3>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={yearlyData}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" className="opacity-30" />
                     <XAxis 
                       dataKey="year" 
                       tick={{ fontSize: 12, fill: '#ffffff' }}
@@ -435,7 +493,7 @@ export default function ZeeCeeDee() {
         )}
 
         {/* Footer */}
-        <div className="text-center mt-12 text-sm text-gray-500 dark:text-gray-400">
+        <div className="text-center mt-12 text-sm text-gray-400">
           <p>
             ZeeCeeDee uses conservative calculations by withdrawing expenses at the beginning of each year.
           </p>
