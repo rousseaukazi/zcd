@@ -86,12 +86,15 @@ export default function ZeeCeeDee() {
   const [burn, setBurn] = useState<number>(50000);
   const [inflation, setInflation] = useState<number>(3);
   const [growth, setGrowth] = useState<number>(7);
+  const [postTaxSalary, setPostTaxSalary] = useState<number>(75000);
+  const [yearsUntilRetirement, setYearsUntilRetirement] = useState<number>(10);
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [yearlyData, setYearlyData] = useState<YearlyData[]>([]);
   
   // Separate display states for inputs to allow proper editing
   const [startingAmountDisplay, setStartingAmountDisplay] = useState<string>('1,000,000');
   const [burnDisplay, setBurnDisplay] = useState<string>('50,000');
+  const [postTaxSalaryDisplay, setPostTaxSalaryDisplay] = useState<string>('75,000');
 
   // Format number with commas for display
   const formatNumberWithCommas = (num: number) => {
@@ -123,7 +126,7 @@ export default function ZeeCeeDee() {
   };
 
   // Generate yearly data for graphs
-  const generateYearlyData = (A: number, B: number, G: number, Inf: number, maxYears: number) => {
+  const generateYearlyData = (A: number, B: number, G: number, Inf: number, salary: number, retirementYears: number, maxYears: number) => {
     const data: YearlyData[] = [];
     let currentPortfolio = A;
     let currentBurn = B;
@@ -137,6 +140,11 @@ export default function ZeeCeeDee() {
     });
 
     for (let year = 1; year <= maxYears; year++) {
+      // Add salary to portfolio if still working (within retirement years)
+      if (year <= retirementYears) {
+        currentPortfolio += salary;
+      }
+      
       // Withdraw burn at beginning of year
       currentPortfolio -= currentBurn;
       
@@ -173,16 +181,50 @@ export default function ZeeCeeDee() {
     const B = burn;
     const Inf = inflation / 100;
     const G = growth / 100;
+    const salary = postTaxSalary;
+    const retirementYears = yearsUntilRetirement;
 
     // Step 1: Calculate real growth multiplier
     const R = (1 + G) / (1 + Inf);
     
-    // Calculate spending rate and sustainable rate for display
+    // Step 2: Calculate portfolio value at retirement (after working years)
+    let portfolioAtRetirement = A;
+    let currentBurn = B;
+    
+    // Simulate the working years where salary is added
+    for (let year = 1; year <= retirementYears; year++) {
+      // Add salary at beginning of year
+      portfolioAtRetirement += salary;
+      // Withdraw expenses
+      portfolioAtRetirement -= currentBurn;
+      // Check if we run out during working years
+      if (portfolioAtRetirement <= 0) {
+        setResult({
+          zcd: year,
+          isInfinite: false,
+          realGrowthRate: (R - 1) * 100,
+          spendingRate: (B / A) * 100,
+          sustainableRate: ((R - 1) / R) * 100
+        });
+        const data = generateYearlyData(A, B, G, Inf, salary, retirementYears, year + 2);
+        setYearlyData(data);
+        return;
+      }
+      // Apply growth
+      portfolioAtRetirement *= (1 + G);
+      // Increase burn for next year
+      currentBurn *= (1 + Inf);
+    }
+    
+    // currentBurn is now the expenses in the first year of retirement
+    const retirementBurn = currentBurn;
+    
+    // Calculate spending rate and sustainable rate for display (based on original values)
     const spendingRate = (B / A) * 100;
     const sustainableRate = ((R - 1) / R) * 100;
 
-    // Step 2: Check if money never runs out
-    if (B / A < (R - 1) / R) {
+    // Step 3: Check if money never runs out in retirement
+    if (retirementBurn / portfolioAtRetirement < (R - 1) / R) {
       setResult({
         zcd: 'infinite',
         isInfinite: true,
@@ -191,31 +233,34 @@ export default function ZeeCeeDee() {
         sustainableRate
       });
       // Generate data for 50 years to show the infinite trend
-      const data = generateYearlyData(A, B, G, Inf, 50);
+      const data = generateYearlyData(A, B, G, Inf, salary, retirementYears, 50);
       setYearlyData(data);
       return;
     }
 
-    // Step 3: Calculate finite ZCD
+    // Step 4: Calculate finite ZCD for retirement phase
     let N: number;
     
     if (Math.abs(R - 1) < 0.0001) { // R ≈ 1 (edge case)
-      N = Math.floor(A / B);
+      N = Math.floor(portfolioAtRetirement / retirementBurn);
     } else {
-      const K = (B * R) / (R - 1);
-      if (K - A <= 0) {
+      const K = (retirementBurn * R) / (R - 1);
+      if (K - portfolioAtRetirement <= 0) {
         // This shouldn't happen if our logic is correct, but handle gracefully
         N = 0;
       } else {
-        N = 1 + Math.log((K - B) / (K - A)) / Math.log(R);
+        N = 1 + Math.log((K - retirementBurn) / (K - portfolioAtRetirement)) / Math.log(R);
         N = Math.floor(N);
       }
     }
 
-    const K = (B * R) / (R - 1);
+    // Total ZCD is working years + retirement years until money runs out
+    const totalZCD = retirementYears + N;
+    
+    const K = (retirementBurn * R) / (R - 1);
     
     setResult({
-      zcd: N,
+      zcd: totalZCD,
       isInfinite: false,
       realGrowthRate: (R - 1) * 100,
       criticalCapital: K,
@@ -224,9 +269,9 @@ export default function ZeeCeeDee() {
     });
 
     // Generate yearly data up to ZCD + a few extra years
-    const data = generateYearlyData(A, B, G, Inf, N + 5);
+    const data = generateYearlyData(A, B, G, Inf, salary, retirementYears, totalZCD + 5);
     setYearlyData(data);
-  }, [startingAmount, burn, inflation, growth]);
+  }, [startingAmount, burn, inflation, growth, postTaxSalary, yearsUntilRetirement]);
 
   useEffect(() => {
     calculateZCD();
@@ -282,8 +327,8 @@ export default function ZeeCeeDee() {
             Zero Cash Date Calculator
           </p>
           <p className="text-sm text-gray-400 max-w-2xl mx-auto">
-            Calculate when you&apos;ll run out of money based on your starting amount, burn rate, inflation, and growth rate.
-            We withdraw expenses at the beginning of each year for the most conservative estimate.
+            Calculate when you&apos;ll run out of money based on your starting amount, burn rate, salary contributions, and growth rate.
+            We add salary and withdraw expenses at the beginning of each year for the most conservative estimate.
           </p>
         </div>
 
@@ -301,15 +346,15 @@ export default function ZeeCeeDee() {
                   Starting Amount
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium">$</span>
                   <input
                     type="text"
                     value={startingAmountDisplay}
                     onChange={(e) => handleInputChange(e.target.value, setStartingAmountDisplay, setStartingAmount)}
                     onBlur={() => handleInputBlur(startingAmount, setStartingAmountDisplay)}
-                    className="w-full pl-8 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                    className="w-full pl-4 pr-12 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                     placeholder="1,000,000"
                   />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-emerald-500 px-2 py-1 rounded text-sm">$</span>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">Your liquid net worth</p>
               </div>
@@ -320,15 +365,15 @@ export default function ZeeCeeDee() {
                   Annual Burn
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium">$</span>
                   <input
                     type="text"
                     value={burnDisplay}
                     onChange={(e) => handleInputChange(e.target.value, setBurnDisplay, setBurn)}
                     onBlur={() => handleInputBlur(burn, setBurnDisplay)}
-                    className="w-full pl-8 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                    className="w-full pl-4 pr-12 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                     placeholder="50,000"
                   />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-emerald-500 px-2 py-1 rounded text-sm">$</span>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">Your annual expenses (first year)</p>
               </div>
@@ -366,9 +411,58 @@ export default function ZeeCeeDee() {
                     className="w-full pr-12 pl-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                     placeholder="7.0"
                   />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-green-500 px-2 py-1 rounded text-sm">%</span>
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-blue-500 px-2 py-1 rounded text-sm">%</span>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">Annual portfolio growth rate</p>
+              </div>
+
+              {/* Post Tax Salary */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Post Tax Salary
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={postTaxSalaryDisplay}
+                    onChange={(e) => handleInputChange(e.target.value, setPostTaxSalaryDisplay, setPostTaxSalary)}
+                    onBlur={() => handleInputBlur(postTaxSalary, setPostTaxSalaryDisplay)}
+                    className="w-full pl-4 pr-12 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                    placeholder="75,000"
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-emerald-500 px-2 py-1 rounded text-sm">$</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Annual income added to portfolio</p>
+              </div>
+
+              {/* Years Until Retirement */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Years Until Retirement
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={yearsUntilRetirement || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || value === '0') {
+                        setYearsUntilRetirement(0);
+                      } else {
+                        const numValue = parseInt(value, 10);
+                        if (!isNaN(numValue) && numValue >= 0) {
+                          setYearsUntilRetirement(numValue);
+                        }
+                      }
+                    }}
+                    className="w-full pr-20 pl-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                    placeholder="10"
+                  />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-purple-500 px-2 py-1 rounded text-sm">years</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Years you&apos;ll continue earning salary</p>
               </div>
             </div>
           </div>
@@ -535,7 +629,7 @@ export default function ZeeCeeDee() {
         {/* Footer */}
         <div className="text-center mt-12 text-sm text-gray-400">
           <p>
-            ZeeCeeDee uses conservative calculations by withdrawing expenses at the beginning of each year.
+            ZeeCeeDee uses conservative calculations by adding salary and withdrawing expenses at the beginning of each year.
           </p>
           <p className="mt-2">
             This tool is for educational purposes only and should not be considered financial advice.
