@@ -378,92 +378,100 @@ export default function ZeeCeeDee() {
                 <p className="text-xs text-gray-400 mt-1">Your annual expenses (first year)</p>
               </div>
 
-              {/* Inflation Rate */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Inflation Rate
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={inflation}
-                    onChange={(e) => setInflation(Number(e.target.value))}
-                    className="w-full pr-12 pl-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                    placeholder="3.0"
-                  />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-blue-500 px-2 py-1 rounded text-sm">%</span>
+              {/* Inflation Rate & Growth Rate - Side by Side */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Inflation Rate */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Inflation Rate
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={inflation}
+                      onChange={(e) => setInflation(Number(e.target.value))}
+                      className="w-full pr-12 pl-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                      placeholder="3.0"
+                    />
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-blue-500 px-2 py-1 rounded text-sm">%</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Annual expense growth rate</p>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Annual expense growth rate</p>
+
+                {/* Growth Rate */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Portfolio Growth Rate
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={growth}
+                      onChange={(e) => setGrowth(Number(e.target.value))}
+                      className="w-full pr-12 pl-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                      placeholder="7.0"
+                    />
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-blue-500 px-2 py-1 rounded text-sm">%</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Annual portfolio growth rate</p>
+                </div>
               </div>
 
-              {/* Growth Rate */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Portfolio Growth Rate
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={growth}
-                    onChange={(e) => setGrowth(Number(e.target.value))}
-                    className="w-full pr-12 pl-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                    placeholder="7.0"
-                  />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-blue-500 px-2 py-1 rounded text-sm">%</span>
+              {/* Post Tax Salary & Years Until Retirement - Side by Side */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Post Tax Salary */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Post Tax Salary
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={postTaxSalaryDisplay}
+                      onChange={(e) => handleInputChange(e.target.value, setPostTaxSalaryDisplay, setPostTaxSalary)}
+                      onBlur={() => handleInputBlur(postTaxSalary, setPostTaxSalaryDisplay)}
+                      className="w-full pl-4 pr-12 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                      placeholder="75,000"
+                    />
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-emerald-500 px-2 py-1 rounded text-sm">$</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Annual income added to portfolio</p>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Annual portfolio growth rate</p>
-              </div>
 
-              {/* Post Tax Salary */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Post Tax Salary
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={postTaxSalaryDisplay}
-                    onChange={(e) => handleInputChange(e.target.value, setPostTaxSalaryDisplay, setPostTaxSalary)}
-                    onBlur={() => handleInputBlur(postTaxSalary, setPostTaxSalaryDisplay)}
-                    className="w-full pl-4 pr-12 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                    placeholder="75,000"
-                  />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-emerald-500 px-2 py-1 rounded text-sm">$</span>
-                </div>
-                <p className="text-xs text-gray-400 mt-1">Annual income added to portfolio</p>
-              </div>
-
-              {/* Years Until Retirement */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Years Until Retirement
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="1"
-                    min="0"
-                    value={yearsUntilRetirement || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value === '' || value === '0') {
-                        setYearsUntilRetirement(0);
-                      } else {
-                        const numValue = parseInt(value, 10);
-                        if (!isNaN(numValue) && numValue >= 0) {
-                          setYearsUntilRetirement(numValue);
+                {/* Years Until Retirement */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Years Until Retirement
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={yearsUntilRetirement || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || value === '0') {
+                          setYearsUntilRetirement(0);
+                        } else {
+                          const numValue = parseInt(value, 10);
+                          if (!isNaN(numValue) && numValue >= 0) {
+                            setYearsUntilRetirement(numValue);
+                          }
                         }
-                      }
-                    }}
-                    className="w-full pr-20 pl-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                    placeholder="10"
-                  />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-purple-500 px-2 py-1 rounded text-sm">years</span>
+                      }}
+                      className="w-full pr-20 pl-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                      placeholder="10"
+                    />
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white font-bold text-lg bg-purple-500 px-2 py-1 rounded text-sm">years</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Years you&apos;ll continue earning salary</p>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Years you&apos;ll continue earning salary</p>
               </div>
+
+
             </div>
           </div>
 
@@ -476,8 +484,8 @@ export default function ZeeCeeDee() {
             {result && (
               <div className="space-y-6">
                 {/* Main Result */}
-                <div className="text-center p-6 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-xl">
-                  <h3 className="text-lg font-medium text-gray-300 mb-2">
+                <div className="text-center px-5 py-6 bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-xl">
+                  <h3 className="text-lg font-medium text-gray-300 mb-3">
                     Zero Cash Date
                   </h3>
                   {result.isInfinite ? (
@@ -502,30 +510,30 @@ export default function ZeeCeeDee() {
                 </div>
 
                 {/* Detailed Metrics */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-700 p-4 rounded-lg">
-                    <p className="text-xs text-gray-400 uppercase tracking-wide">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-700 px-3 py-4 rounded-lg">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
                       Real Growth Rate
                     </p>
-                    <p className="text-lg font-semibold text-white">
+                    <p className="text-lg font-bold text-white">
                       {formatPercent(result.realGrowthRate)}
                     </p>
                   </div>
                   
-                  <div className="bg-gray-700 p-4 rounded-lg">
-                    <p className="text-xs text-gray-400 uppercase tracking-wide">
+                  <div className="bg-gray-700 px-3 py-4 rounded-lg">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
                       Spending Rate
                     </p>
-                    <p className="text-lg font-semibold text-white">
+                    <p className="text-lg font-bold text-white">
                       {formatPercent(result.spendingRate)}
                     </p>
                   </div>
                   
-                  <div className="bg-gray-700 p-4 rounded-lg col-span-2">
-                    <p className="text-xs text-gray-400 uppercase tracking-wide">
+                  <div className="bg-gray-700 px-3 py-4 rounded-lg">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
                       Sustainable Rate
                     </p>
-                    <p className="text-lg font-semibold text-white">
+                    <p className="text-lg font-bold text-white">
                       {formatPercent(result.sustainableRate)}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
@@ -534,22 +542,22 @@ export default function ZeeCeeDee() {
                   </div>
 
                   {result.criticalCapital && (
-                    <div className="bg-gray-700 p-4 rounded-lg col-span-2">
-                      <p className="text-xs text-gray-400 uppercase tracking-wide">
+                    <div className="bg-gray-700 px-3 py-4 rounded-lg">
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
                         Critical Capital
                       </p>
-                      <p className="text-lg font-semibold text-white">
+                      <p className="text-lg font-bold text-white">
                         {formatCurrency(result.criticalCapital)}
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
-                        Balance needed to exactly cover annual burn
+                        Balance needed to go infinite.
                       </p>
                     </div>
                   )}
                 </div>
 
                 {/* Status Message */}
-                <div className={`p-4 rounded-lg ${
+                <div className={`px-3 py-4 rounded-lg ${
                   result.isInfinite 
                     ? 'bg-green-50 border border-green-200' 
                     : 'bg-amber-50 border border-amber-200'
