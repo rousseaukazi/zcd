@@ -13,8 +13,27 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ZeeCeeDee - Zero Cash Date Calculator",
+  title: "Zero Cash Date",
   description: "Calculate your Zero Cash Date (ZCD) - A beautiful financial calculator to determine when you'll run out of money based on your starting amount, burn rate, inflation, and growth.",
+  openGraph: {
+    title: "Zero Cash Date Calculator",
+    description: "Calculate when you'll run out of money with this beautiful financial calculator",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Zero Cash Date Calculator - Money with wings illustration",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Zero Cash Date Calculator",
+    description: "Calculate when you'll run out of money with this beautiful financial calculator",
+    images: ["/og-image.jpg"],
+  },
 };
 
 export default function RootLayout({

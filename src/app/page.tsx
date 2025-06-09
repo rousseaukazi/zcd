@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface CalculationResult {
@@ -168,7 +168,7 @@ export default function ZeeCeeDee() {
     return data;
   };
 
-  const calculateZCD = () => {
+  const calculateZCD = useCallback(() => {
     const A = startingAmount;
     const B = burn;
     const Inf = inflation / 100;
@@ -226,11 +226,11 @@ export default function ZeeCeeDee() {
     // Generate yearly data up to ZCD + a few extra years
     const data = generateYearlyData(A, B, G, Inf, N + 5);
     setYearlyData(data);
-  };
+  }, [startingAmount, burn, inflation, growth]);
 
   useEffect(() => {
     calculateZCD();
-  }, [startingAmount, burn, inflation, growth]);
+  }, [calculateZCD]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -246,12 +246,20 @@ export default function ZeeCeeDee() {
   };
 
   // Custom tooltip formatter for charts
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: {
+    active?: boolean;
+    payload?: Array<{
+      color: string;
+      name: string;
+      value: number;
+    }>;
+    label?: string | number;
+  }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-gray-800 p-3 border border-gray-600 rounded-lg shadow-lg tooltip-animated">
           <p className="font-medium text-white">{`Year ${label}`}</p>
-          {payload.map((entry: any, index: number) => (
+          {payload.map((entry, index: number) => (
             <p key={index} style={{ color: entry.color }} className="text-sm">
               {entry.name}: {formatCurrency(entry.value)}
             </p>
@@ -274,7 +282,7 @@ export default function ZeeCeeDee() {
             Zero Cash Date Calculator
           </p>
           <p className="text-sm text-gray-400 max-w-2xl mx-auto">
-            Calculate when you'll run out of money based on your starting amount, burn rate, inflation, and growth rate.
+            Calculate when you&apos;ll run out of money based on your starting amount, burn rate, inflation, and growth rate.
             We withdraw expenses at the beginning of each year for the most conservative estimate.
           </p>
         </div>
@@ -290,7 +298,7 @@ export default function ZeeCeeDee() {
               {/* Starting Amount */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Starting Amount (A)
+                  Starting Amount
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium">$</span>
@@ -309,7 +317,7 @@ export default function ZeeCeeDee() {
               {/* Annual Burn */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Annual Burn (B)
+                  Annual Burn
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium">$</span>
@@ -328,7 +336,7 @@ export default function ZeeCeeDee() {
               {/* Inflation Rate */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Inflation Rate (Inf)
+                  Inflation Rate
                 </label>
                 <div className="relative">
                   <input
@@ -347,7 +355,7 @@ export default function ZeeCeeDee() {
               {/* Growth Rate */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Growth Rate (G)
+                  Portfolio Growth Rate
                 </label>
                 <div className="relative">
                   <input
@@ -384,7 +392,7 @@ export default function ZeeCeeDee() {
                         <AnimatedNumber value={result.zcd} />
                       </p>
                       <p className="text-sm text-green-400 font-medium">
-                        You'll never run out of money!
+                        You&apos;ll never run out of money!
                       </p>
                     </div>
                   ) : (
@@ -478,7 +486,15 @@ export default function ZeeCeeDee() {
               </h3>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={yearlyData}>
+                  <LineChart 
+                    data={yearlyData}
+                    margin={{
+                      top: 20,
+                      right: 80,
+                      left: 80,
+                      bottom: 20,
+                    }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" className="opacity-30" />
                     <XAxis 
                       dataKey="year" 
@@ -487,6 +503,7 @@ export default function ZeeCeeDee() {
                     <YAxis 
                       tick={{ fontSize: 12, fill: '#ffffff' }}
                       tickFormatter={(value) => formatCurrency(value)}
+                      width={70}
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
