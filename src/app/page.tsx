@@ -203,7 +203,7 @@ export default function ZeeCeeDee() {
           zcd: year,
           isInfinite: false,
           realGrowthRate: (R - 1) * 100,
-          spendingRate: (B / A) * 100,
+          spendingRate: (B / A) * 100, // Use simple rate if we run out during working years
           sustainableRate: ((R - 1) / R) * 100
         });
         const data = generateYearlyData(A, B, G, Inf, salary, retirementYears, year + 2);
@@ -219,9 +219,13 @@ export default function ZeeCeeDee() {
     // currentBurn is now the expenses in the first year of retirement
     const retirementBurn = currentBurn;
     
-    // Calculate spending rate and sustainable rate for display (based on original values)
-    const spendingRate = (B / A) * 100;
+    // Calculate meaningful spending and sustainable rates
+    // For retirement phase: spending rate based on portfolio at retirement
+    const retirementSpendingRate = portfolioAtRetirement > 0 ? (retirementBurn / portfolioAtRetirement) * 100 : 0;
     const sustainableRate = ((R - 1) / R) * 100;
+    
+    // Use different rates depending on whether we're in working years or retirement-focused
+    const displaySpendingRate = retirementYears > 0 ? retirementSpendingRate : (B / A) * 100;
 
     // Step 3: Check if money never runs out in retirement
     if (retirementBurn / portfolioAtRetirement < (R - 1) / R) {
@@ -229,7 +233,7 @@ export default function ZeeCeeDee() {
         zcd: 'infinite',
         isInfinite: true,
         realGrowthRate: (R - 1) * 100,
-        spendingRate,
+        spendingRate: displaySpendingRate,
         sustainableRate
       });
       // Generate data for 50 years to show the infinite trend
@@ -264,7 +268,7 @@ export default function ZeeCeeDee() {
       isInfinite: false,
       realGrowthRate: (R - 1) * 100,
       criticalCapital: K,
-      spendingRate,
+      spendingRate: displaySpendingRate,
       sustainableRate
     });
 
@@ -522,7 +526,7 @@ export default function ZeeCeeDee() {
                   
                   <div className="bg-gray-700 px-3 py-4 rounded-lg">
                     <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-                      Spending Rate
+                      {yearsUntilRetirement > 0 ? "Retirement Spending Rate" : "Spending Rate"}
                     </p>
                     <p className="text-lg font-bold text-white">
                       {formatPercent(result.spendingRate)}
@@ -568,8 +572,12 @@ export default function ZeeCeeDee() {
                       : 'text-amber-800'
                   }`}>
                     {result.isInfinite 
-                      ? `Your spending rate (${formatPercent(result.spendingRate)}) is below the sustainable rate (${formatPercent(result.sustainableRate)}). Your portfolio growth covers your expenses!`
-                      : `Your spending rate (${formatPercent(result.spendingRate)}) exceeds the sustainable rate (${formatPercent(result.sustainableRate)}). Consider reducing expenses or increasing growth.`
+                      ? yearsUntilRetirement > 0 
+                        ? `Your salary contributions and portfolio growth will sustain you indefinitely. Even after retirement, your spending rate (${formatPercent(result.spendingRate)}) will be below the sustainable rate (${formatPercent(result.sustainableRate)}).`
+                        : `Your spending rate (${formatPercent(result.spendingRate)}) is below the sustainable rate (${formatPercent(result.sustainableRate)}). Your portfolio growth covers your expenses!`
+                      : yearsUntilRetirement > 0
+                        ? `After ${yearsUntilRetirement} years of work, your retirement spending rate (${formatPercent(result.spendingRate)}) will exceed the sustainable rate (${formatPercent(result.sustainableRate)}). Consider reducing expenses, increasing salary savings, or growing your portfolio.`
+                        : `Your spending rate (${formatPercent(result.spendingRate)}) exceeds the sustainable rate (${formatPercent(result.sustainableRate)}). Consider reducing expenses or increasing growth.`
                     }
                   </p>
                 </div>
